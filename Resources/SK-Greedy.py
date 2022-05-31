@@ -29,8 +29,9 @@ class SINR:
 	__interference_limits = None
 
 	__taboo_list = None
+	__slot_maximum = None
 
-	def __init__(self, alfa, sinr_threshold_db, sinr_adjust_db, no_dbm):
+	def __init__(self, alfa, sinr_threshold_db, sinr_adjust_db, no_dbm, slot_maximum):
 		
 		self.__alfa = alfa
 		self.__sinr_threshold_db = sinr_threshold_db
@@ -41,6 +42,9 @@ class SINR:
 		self.__sinr_adjust = 10**(self.__sinr_adjust_db/10)
 		self.__no_mw = 10**(self.__no_dbm/10)
 		self.__no_w = self.__no_mw * 10**(-3)
+
+		self.__slot_maximum = slot_maximum
+		self.__taboo_list = [[] for cs in range(slot_maximum)]
 
 
 	def __coordinatesMatrix(self, devices_coordinate):
@@ -60,7 +64,12 @@ class SINR:
 		return list(range(len(self.__devices_map)))
 
 
-	def prepare(self, devices_file_path, slot_maximum):
+	def reset(self):
+
+		self.__taboo_list = [[] for cs in range(self.__slot_maximum)]
+
+
+	def prepare(self, devices_file_path):
 
 		devices_file = open(devices_file_path)
 		devices_coordinate = []
@@ -98,8 +107,6 @@ class SINR:
 					self.__interference_power[k][i] = self.__transmission_power[i] / self.__devices_map[i][self.__devices_closiest[k]] ** self.__alfa
 
 			self.__interference_limits.append(((self.__transmission_power[i] / self.__devices_map[i][self.__devices_closiest[i]] ** self.__alfa) - self.__sinr_threshold * self.__no_w) / self.__sinr_threshold)
-
-		self.__taboo_list = [[] for cs in range(slot_maximum)]
 
 
 	def check(self, devices_slot):
@@ -190,7 +197,7 @@ class stochasticKGreedyScheduler:
 		return generated_candidates
 
 
-	def executeByRounds(self, rounds):
+	def executeByGenerations(self, rounds):
 
 		generated_candidates = []
 
@@ -200,40 +207,97 @@ class stochasticKGreedyScheduler:
 		generated_candidates.sort(key = len)
 		return generated_candidates
 
+
+	def simpleExecution(self, mode, generations=500, seconds=5):
+
+		initial_time = time.time()
+		if mode == "g":
+			results = self.executeByGenerations(generations)
+		elif mode == "s":
+			results = self.executeByTime(seconds)
+		else:
+			print("\nINVALID EXECUTION MODE!")
+			return
+		final_time = time.time()
+
+		if len(results) > 10:
+			top10 = results[:10]
+		else:
+			top10 = results
+
+		top10_eval = [len(candidate) for candidate in top10]
+		general_eval = [len(candidate) for candidate in results]
+
+		print("\n================= EXECUTION BEGIN ================")
+		print("\n--")
+		print("BEST SCHEDULE FOUND:", results[0])
+		print("BEST SCHEDULE SIZE:", len(results[0]))
+		print("--")
+		print("TOP " + str(len(top10)) + " SCHEDULES STATISTICS:")
+		print("\tMEAN SCHEDULE SIZE:", statistics.mean(top10_eval))
+		print("\tSTDEV SCHEDULE SIZE:", statistics.stdev(top10_eval))
+		print("--")
+		print("LAST GENERATION STATISTICS:")
+		print("\tMEAN SCHEDULE SIZE:", statistics.mean(general_eval))
+		print("\tSTDEV SCHEDULE SIZE:", statistics.stdev(general_eval))
+		print("--")
+		print("EXECUTION TIME (s):", final_time - initial_time)
+		print("--\n")
+		print("==================================================\n")
+
+
+	def experimentExecution(self, rounds, mode, generations=500, seconds=5):
+
+		if type(rounds) != int or rounds < 2:
+			print("\nINAVLID NUMBER OF ROUNDS!")
+			return
+
+		time_eval = []
+		best_eval = []
+		print("\n================ EXPERIMENT BEGIN ================\n")
+		for r in range(rounds):
+			self.__sinr_manager.reset()
+			print("STARTING ROUND #" + str(r+1) + "!")
+			initial_time = time.time()
+			if mode == "g":
+				results = self.executeByGenerations(generations)
+			elif mode == "s":
+				results = self.executeByTime(seconds)
+			else:
+				print("\nINVALID EXECUTION MODE!")
+				return
+			final_time = time.time()
+
+			time_eval.append(final_time - initial_time)
+			best_eval.append(len(results[0]))
+			print("ROUND #" + str(r+1) + " DONE!")
+
+		time_eval.sort()
+		best_eval.sort()
+		print("\n--")
+		print("MEAN SIZE OF BEST SCHEDULES FOUND:", statistics.mean(best_eval))
+		print("STDEV SIZE OF BEST SCHEDULES FOUND:", statistics.stdev(best_eval))
+		print("BEST SIZE OF BEST SCHEDULES FOUND:", best_eval[0])
+		print("WORST SIZE OF BEST SCHEDULES FOUND:", best_eval[-1])
+		print("--")
+		print("MEAN EXECUTION TIME:", statistics.mean(time_eval))
+		print("STDEV EXECUTION TIME:", statistics.stdev(time_eval))
+		print("BEST EXECUTION TIME:", time_eval[0])
+		print("WORST EXECUTION TIME:", time_eval[-1])
+		print("--\n")
+		print("==================================================\n")
+
 #########################################################################################################################################
 #########################################################################################################################################
 #########################################################################################################################################
 
 STOCHASTIC_K = 5
-MAX_SLOT_SIZE = 15
+MAX_SLOT_SIZE = 800
+FILE_PATH = "800-0.txt"
 
-sinr = SINR(4, 20, 50, -90)
-sinr.prepare("50-0.txt", MAX_SLOT_SIZE)
-generator = stochasticKGreedyScheduler(MAX_SLOT_SIZE, STOCHASTIC_K, sinr)
+sinr = SINR(4, 20, 50, -90, MAX_SLOT_SIZE)
+sinr.prepare(FILE_PATH)
+scheduler = stochasticKGreedyScheduler(MAX_SLOT_SIZE, STOCHASTIC_K, sinr)
 
-initial_time = time.time()
-#results = generator.executeByTime(15)
-results = generator.executeByRounds(500)
-final_time = time.time()
-
-if len(results) > 10:
-	top10 = results[:10]
-else:
-	top10 = results
-top10_eval = [len(candidate) for candidate in top10]
-general_eval = [len(candidate) for candidate in results]
-
-print("\n--")
-print("BEST SCHEDULE FOUND:", results[0])
-print("BEST SCHEDULE SIZE:", len(results[0]))
-print("--")
-print("TOP " + str(len(top10)) + " SCHEDULES STATISTICS:")
-print("\tMEAN SCHEDULE SIZE:", statistics.mean(top10_eval))
-print("\tSTDEV SCHEDULE SIZE:", statistics.stdev(top10_eval))
-print("--")
-print("LAST GENERATION STATISTICS:")
-print("\tMEAN SCHEDULE SIZE:", statistics.mean(general_eval))
-print("\tSTDEV SCHEDULE SIZE:", statistics.stdev(general_eval))
-print("--")
-print("EXECUTION TIME (s):", final_time - initial_time)
-print("--\n")
+#scheduler.simpleExecution("s")
+scheduler.experimentExecution(30, "s", seconds=20)
