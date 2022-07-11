@@ -14,7 +14,7 @@ minimum possible number time of slots.<br/>
 
 ### How does it was created?
 
-The NIEP platform was developed using Python 3 programming language, including the 
+SINR GeTS was developed using Python 3 programming language, including the 
 non-native library NumPy.
 
 ### Next Steps
