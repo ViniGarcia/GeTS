@@ -33,4 +33,4 @@ Elias Procópio Duarte Junior (UFPR - Brazil)
 
 <p align="justify">Fulber-Garcia, Vinicius, Fábio Engel, and Elias P. Duarte Jr. "A bioinspired scheduling strategy for dense wireless networks under the sinr model." International Conference on Intelligent Systems Design and Applications (ISDA). Springer Nature Switzerland, 2022.</p>
 
-<p align="justify">Fulber-Garcia, Vinicius, Fábio Engel, and Elias P. Duarte. "A genetic scheduling strategy with spatial reuse for dense wireless networks." International Journal of Hybrid Intelligent Systems Preprint: 1-15.</p>
+<p align="justify">Fulber-Garcia, Vinicius, Fábio Engel, and Elias P. Duarte. "A genetic scheduling strategy with spatial reuse for dense wireless networks." International Journal of Hybrid Intelligent Systems (IJHIS).</p>
